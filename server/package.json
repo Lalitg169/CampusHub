@@ -1,12 +1,12 @@
 {
-  "name": "server",
+  "name": "campushub-server",
   "version": "1.0.0",
-  "description": "DevBlog backend API",
-  "main": "dist/server.js",
+  "description": "CampusHub API",
+  "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/server.js",
-    "dev": "tsx watch src/server.ts",
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
     "typecheck": "tsc --noEmit",
     "db:up": "docker compose -f ../docker-compose.yml up -d",
     "db:down": "docker compose -f ../docker-compose.yml down",
@@ -27,7 +27,8 @@
     "express-validator": "^7.3.2",
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.2.0",
-    "pg": "^8.23.0"
+    "pg": "^8.23.0",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",

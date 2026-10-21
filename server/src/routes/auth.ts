@@ -6,12 +6,12 @@ import { all, get, run, isUniqueViolation } from '../db';
 import { requireAuth, signToken } from '../middleware/auth';
 import validate from '../middleware/validate';
 import { authLimiter } from '../middleware/rateLimit';
+import { config } from '../config';
 import { UserRow, PasswordResetRow } from '../types';
 
 const router = express.Router();
 
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
-const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
 // bcryptjs is pure JavaScript, so its *Sync calls hold the event loop for the
 // whole hash and every other request waits. The async versions hand control
@@ -199,7 +199,7 @@ router.post(
             // directly to keep the reset flow testable. In production it must never
             // leave the server: anyone able to name a user could otherwise read the
             // token out of the response — or the logs — and take the account over.
-            if (IS_PRODUCTION) {
+            if (config.isProduction) {
                 return res.json({ success: true, message: genericMessage });
             }
 

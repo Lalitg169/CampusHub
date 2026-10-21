@@ -1,27 +1,19 @@
 import { Pool, QueryResultRow } from 'pg';
+import { config } from './config';
 
 // Hosted Postgres (Neon, Supabase, Render) serves a certificate that is not in
-// Node's default trust store, so verification is relaxed for those. Supply a CA
-// via PGSSLROOTCERT and set DATABASE_SSL=false to verify properly instead.
+// Node's default trust store, so verification is relaxed for those.
 function sslConfig(): false | { rejectUnauthorized: boolean } {
-    if (process.env.DATABASE_SSL === 'false') return false;
-    const requestedInUrl = /[?&]sslmode=require/.test(process.env.DATABASE_URL ?? '');
-    if (process.env.DATABASE_SSL === 'true' || requestedInUrl) return { rejectUnauthorized: false };
+    if (config.databaseSsl === 'false') return false;
+    const requestedInUrl = /[?&]sslmode=require/.test(config.databaseUrl);
+    if (config.databaseSsl === 'true' || requestedInUrl) return { rejectUnauthorized: false };
     return false;
 }
 
 export const pool = new Pool({
-    ...(process.env.DATABASE_URL
-        ? { connectionString: process.env.DATABASE_URL }
-        : {
-              host: process.env.PGHOST,
-              port: process.env.PGPORT ? Number(process.env.PGPORT) : undefined,
-              user: process.env.PGUSER,
-              password: process.env.PGPASSWORD,
-              database: process.env.PGDATABASE,
-          }),
+    connectionString: config.databaseUrl,
     ssl: sslConfig(),
-    max: Number(process.env.PGPOOL_MAX) || 10,
+    max: config.poolMax,
     idleTimeoutMillis: 30_000,
     connectionTimeoutMillis: 10_000,
 });

@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { config } from '../config';
 import { AuthUser } from '../types';
 
 function readToken(req: Request): string | null {
@@ -9,15 +10,11 @@ function readToken(req: Request): string | null {
 }
 
 function verify(token: string): AuthUser {
-    const secret = process.env.JWT_SECRET;
-    if (!secret) throw new Error('JWT_SECRET is not configured.');
-    return jwt.verify(token, secret) as AuthUser;
+    return jwt.verify(token, config.jwtSecret) as AuthUser;
 }
 
 export function signToken(user: AuthUser): string {
-    const secret = process.env.JWT_SECRET;
-    if (!secret) throw new Error('JWT_SECRET is not configured.');
-    return jwt.sign({ id: user.id, username: user.username }, secret, { expiresIn: '7d' });
+    return jwt.sign({ id: user.id, username: user.username }, config.jwtSecret, { expiresIn: '7d' });
 }
 
 /** Rejects the request unless a valid bearer token is present. */
