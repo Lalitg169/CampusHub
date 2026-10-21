@@ -11,7 +11,7 @@
     "db:up": "docker compose -f ../docker-compose.yml up -d",
     "db:down": "docker compose -f ../docker-compose.yml down",
     "db:reset": "docker compose -f ../docker-compose.yml down -v && docker compose -f ../docker-compose.yml up -d",
-    "db:schema": "psql \"$DATABASE_URL\" -f schema.sql",
+    "db:migrate": "tsx scripts/migrate.ts",
     "seed": "tsx src/seed.ts"
   },
   "keywords": [],

@@ -8,9 +8,9 @@
 set -euo pipefail
 
 PGBIN="${PGBIN:-$(ls -d /usr/lib/postgresql/*/bin 2>/dev/null | sort -V | tail -1)}"
-PGDATA="${PGDATA:-$HOME/.local/share/devblog-pg}"
+PGDATA="${PGDATA:-$HOME/.local/share/campushub-pg}"
 PORT="${PGPORT:-5433}"
-URL="postgres://devblog:devblog@localhost:${PORT}/devblog"
+URL="postgres://campushub:campushub@localhost:${PORT}/campushub"
 
 if [ ! -x "$PGBIN/pg_ctl" ]; then
     echo "Postgres binaries not found. Set PGBIN, or install postgresql." >&2
@@ -21,8 +21,8 @@ init() {
     [ -d "$PGDATA" ] && return
     local pwfile
     pwfile=$(mktemp)
-    printf 'devblog' > "$pwfile"
-    "$PGBIN/initdb" -D "$PGDATA" -U devblog \
+    printf 'campushub' > "$pwfile"
+    "$PGBIN/initdb" -D "$PGDATA" -U campushub \
         --auth-local=trust --auth-host=scram-sha-256 --pwfile="$pwfile" > /dev/null
     rm -f "$pwfile"
     echo "Initialised cluster at $PGDATA"
@@ -38,15 +38,14 @@ case "${1:-start}" in
                 -o "-p $PORT -c listen_addresses=localhost -k $PGDATA" \
                 -l "$PGDATA/server.log" start
         fi
-        createdb -h localhost -p "$PORT" -U devblog devblog 2>/dev/null \
-            && psql "$URL" -q -f "$(dirname "$0")/../server/schema.sql" \
-            && echo "Created database and applied schema." \
+        PGPASSWORD=campushub createdb -h localhost -p "$PORT" -U campushub campushub 2>/dev/null \
+            && echo "Created database. Run: npm --prefix server run db:migrate" \
             || echo "Database already present."
         echo "DATABASE_URL=$URL"
         ;;
     stop)    "$PGBIN/pg_ctl" -D "$PGDATA" stop ;;
     status)  "$PGBIN/pg_isready" -h localhost -p "$PORT" ;;
-    psql)    psql "$URL" ;;
+    psql)    PGPASSWORD=campushub psql "$URL" ;;
     destroy)
         "$PGBIN/pg_ctl" -D "$PGDATA" stop 2>/dev/null || true
         rm -rf "$PGDATA"

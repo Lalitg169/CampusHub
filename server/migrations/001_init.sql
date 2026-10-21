@@ -1,5 +1,4 @@
--- DevBlog schema (PostgreSQL)
--- Apply with: psql "$DATABASE_URL" -f schema.sql
+-- baseline: users, posts and the tables around them
 
 CREATE TABLE IF NOT EXISTS users (
     id          SERIAL PRIMARY KEY,

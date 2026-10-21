@@ -1,23 +1,22 @@
 services:
   db:
     image: postgres:16-alpine
-    container_name: devblog-db
+    container_name: campushub-db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: devblog
-      POSTGRES_PASSWORD: devblog
-      POSTGRES_DB: devblog
+      POSTGRES_USER: campushub
+      POSTGRES_PASSWORD: campushub
+      POSTGRES_DB: campushub
     # 5433 on the host so this never collides with a system Postgres on 5432.
     ports:
       - "5433:5432"
     volumes:
-      - devblog-data:/var/lib/postgresql/data
-      - ./server/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - campushub-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U devblog -d devblog"]
+      test: ["CMD-SHELL", "pg_isready -U campushub -d campushub"]
       interval: 5s
       timeout: 5s
       retries: 10
 
 volumes:
-  devblog-data:
+  campushub-data:
