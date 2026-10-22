@@ -1,12 +1,12 @@
 import 'dotenv/config';
 import bcrypt from 'bcryptjs';
-import { pool, all, run } from './db';
+import { pool, all, get, run } from './db';
 
 /**
- * Populates the database with sample content.
+ * Sample data for local development.
  *
- *   npm run seed                  # 50 posts, quick smoke data
- *   npm run seed -- --posts=100000  # benchmark dataset
+ *   npm run seed                  # clubs, events, users and 50 posts
+ *   npm run seed -- --posts=100000  # bigger post table
  *   npm run seed -- --fresh       # truncate first
  */
 
@@ -16,9 +16,28 @@ const arg = (name: string, fallback: number): number => {
 };
 
 const POSTS = arg('posts', 50);
-const USERS = arg('users', 8);
 const FRESH = process.argv.includes('--fresh');
 const BATCH = 1000;
+
+const PEOPLE = [
+    'Aarav Sharma', 'Diya Patel', 'Vihaan Gupta', 'Ananya Iyer', 'Arjun Reddy', 'Ishita Verma',
+    'Kabir Singh', 'Meera Nair', 'Rohan Das', 'Saanvi Joshi', 'Aditya Rao', 'Priya Menon',
+];
+
+const CLUBS = [
+    { name: 'Coding Club', slug: 'coding', description: 'Contests, hack nights and workshops on whatever we are building this month.' },
+    { name: 'Robotics Club', slug: 'robotics', description: 'Line followers, drones and a lot of soldering.' },
+    { name: 'Music Society', slug: 'music', description: 'Jams, open mics and the annual fest band.' },
+    { name: 'Drama Club', slug: 'drama', description: 'Street plays, stage productions and improv evenings.' },
+];
+
+const EVENTS = [
+    { club: 'coding', title: 'Intro to Git workshop', venue: 'Lab 3, CS Block', inDays: 3, hour: 16, capacity: 40 },
+    { club: 'coding', title: 'Hack night', venue: 'Seminar Hall', inDays: 10, hour: 18, capacity: 60 },
+    { club: 'robotics', title: 'Line follower build session', venue: 'Workshop, Mech Block', inDays: 5, hour: 14, capacity: 20 },
+    { club: 'music', title: 'Open mic', venue: 'Amphitheatre', inDays: 7, hour: 17, capacity: 100 },
+    { club: 'drama', title: 'Improv evening', venue: 'Auditorium', inDays: 12, hour: 18, capacity: 3 },
+];
 
 const CATEGORIES = ['Technology', 'Databases', 'Frontend', 'DevOps', 'Career', 'Security', 'Finance', 'Language'];
 
@@ -56,28 +75,75 @@ const body = (): string => {
 async function main(): Promise<void> {
     if (FRESH) {
         console.log('Truncating existing data…');
-        await run('TRUNCATE likes, comments, password_resets, posts, categories, users RESTART IDENTITY CASCADE');
+        await run(
+            `TRUNCATE certificates, tickets, registrations, events, club_members, clubs,
+                      likes, comments, password_resets, posts, categories, users RESTART IDENTITY CASCADE`
+        );
     }
 
     // One hash reused across seed users; real registration hashes per user.
     const password = bcrypt.hashSync('password123', 10);
-    const usernames = Array.from({ length: USERS }, (_, i) => `author${i + 1}`);
+
+    const accounts = [
+        { username: 'admin', name: 'College Admin', role: 'college_admin' },
+        ...PEOPLE.map((name, i) => ({
+            username: name.split(' ')[0].toLowerCase(),
+            name,
+            role: i < CLUBS.length ? 'club_admin' : 'student',
+        })),
+    ];
 
     await run(
-        `INSERT INTO users (username, password, bio)
-         SELECT u, $1, 'Seeded account for local development.'
-           FROM unnest($2::text[]) AS u
+        `INSERT INTO users (username, name, email, role, password)
+         SELECT u, n, u || '@campushub.local', r, $1
+           FROM unnest($2::text[], $3::text[], $4::text[]) AS x(u, n, r)
          ON CONFLICT (username) DO NOTHING`,
-        [password, usernames]
+        [password, accounts.map((a) => a.username), accounts.map((a) => a.name), accounts.map((a) => a.role)]
     );
     await run(
         `INSERT INTO categories (name) SELECT c FROM unnest($1::text[]) AS c ON CONFLICT (name) DO NOTHING`,
         [CATEGORIES]
     );
+    await run(
+        `INSERT INTO clubs (name, slug, description)
+         SELECT n, s, d FROM unnest($1::text[], $2::text[], $3::text[]) AS x(n, s, d)
+         ON CONFLICT (slug) DO NOTHING`,
+        [CLUBS.map((c) => c.name), CLUBS.map((c) => c.slug), CLUBS.map((c) => c.description)]
+    );
+
+    // the first few people each run one club
+    const admins = accounts.filter((a) => a.role === 'club_admin').map((a) => a.username);
+    await run(
+        `INSERT INTO club_members (club_id, user_id, role)
+         SELECT c.id, u.id, 'admin'
+           FROM unnest($1::text[], $2::text[]) AS x(slug, username)
+           JOIN clubs c ON c.slug = x.slug
+           JOIN users u ON u.username = x.username
+         ON CONFLICT DO NOTHING`,
+        [CLUBS.map((c) => c.slug), admins]
+    );
+
+    const clubs = await all<{ id: number; slug: string }>('SELECT id, slug FROM clubs ORDER BY id');
+    const clubId = new Map(clubs.map((c) => [c.slug, c.id]));
+
+    // event times are IST wall-clock, whatever timezone the db runs in
+    for (const e of EVENTS) {
+        const exists = await get('SELECT 1 FROM events WHERE club_id = $1 AND title = $2', [clubId.get(e.club), e.title]);
+        if (exists) continue;
+        await run(
+            `INSERT INTO events (club_id, title, description, venue, starts_at, ends_at, capacity)
+             VALUES ($1, $2, $3, $4,
+                     (date_trunc('day', NOW() AT TIME ZONE 'Asia/Kolkata') + make_interval(days => $5, hours => $6)) AT TIME ZONE 'Asia/Kolkata',
+                     (date_trunc('day', NOW() AT TIME ZONE 'Asia/Kolkata') + make_interval(days => $5, hours => $6 + 2)) AT TIME ZONE 'Asia/Kolkata',
+                     $7)`,
+            [clubId.get(e.club), e.title, `${e.title}. Open to all students.`, e.venue, e.inDays, e.hour, e.capacity]
+        );
+    }
 
     const userIds = (await all<{ id: number }>('SELECT id FROM users ORDER BY id')).map((r) => r.id);
     const categoryIds = (await all<{ id: number }>('SELECT id FROM categories ORDER BY id')).map((r) => r.id);
-    console.log(`${userIds.length} users, ${categoryIds.length} categories ready.`);
+    const clubIds = clubs.map((c) => c.id);
+    console.log(`${userIds.length} users, ${clubIds.length} clubs, ${EVENTS.length} events ready.`);
 
     const started = Date.now();
     let written = 0;
@@ -88,6 +154,7 @@ async function main(): Promise<void> {
         const bodies: string[] = [];
         const cats: number[] = [];
         const owners: number[] = [];
+        const postClubs: number[] = [];
         const ages: number[] = [];
 
         for (let i = 0; i < size; i++) {
@@ -95,14 +162,15 @@ async function main(): Promise<void> {
             bodies.push(body());
             cats.push(pick(categoryIds));
             owners.push(pick(userIds));
+            postClubs.push(pick(clubIds));
             ages.push(Math.floor(rand() * 720));
         }
 
         await run(
-            `INSERT INTO posts (title, content, category_id, user_id, created_at, updated_at)
-             SELECT t, b, c, u, NOW() - (age || ' days')::interval, NOW()
-               FROM unnest($1::text[], $2::text[], $3::int[], $4::int[], $5::int[]) AS x(t, b, c, u, age)`,
-            [titles, bodies, cats, owners, ages]
+            `INSERT INTO posts (title, content, category_id, user_id, club_id, created_at, updated_at)
+             SELECT t, b, c, u, cl, NOW() - (age || ' days')::interval, NOW()
+               FROM unnest($1::text[], $2::text[], $3::int[], $4::int[], $5::int[], $6::int[]) AS x(t, b, c, u, cl, age)`,
+            [titles, bodies, cats, owners, postClubs, ages]
         );
 
         written += size;
@@ -132,7 +200,7 @@ async function main(): Promise<void> {
 
     const seconds = ((Date.now() - started) / 1000).toFixed(1);
     console.log(`\nSeeded ${POSTS.toLocaleString()} posts in ${seconds}s.`);
-    console.log('Log in with any of author1…author%d / password123', userIds.length);
+    console.log('Log in as admin, aarav (club admin) or meera (student), password password123');
 }
 
 main()
