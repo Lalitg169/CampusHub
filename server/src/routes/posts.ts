@@ -23,7 +23,7 @@ router.param('commentId', numericId('Comment'));
 const POST_SELECT = `
     SELECT
         p.id, p.title, p.content, p.cover_image, p.created_at, p.updated_at,
-        u.id AS user_id, u.username AS author,
+        u.id AS user_id, u.name AS author,
         c.id AS category_id, c.name AS category,
         (SELECT COUNT(*)::int FROM comments WHERE comments.post_id = p.id) AS comment_count,
         (SELECT COUNT(*)::int FROM likes WHERE likes.post_id = p.id) AS like_count,
@@ -34,7 +34,7 @@ const POST_SELECT = `
 `;
 
 const COMMENT_SELECT = `
-    SELECT cm.id, cm.content, cm.created_at, u.id AS user_id, u.username AS author
+    SELECT cm.id, cm.content, cm.created_at, u.id AS user_id, u.name AS author
     FROM comments cm
     JOIN users u ON u.id = cm.user_id
 `;

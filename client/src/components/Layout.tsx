@@ -1,6 +1,9 @@
 import { Link, NavLink, Outlet } from 'react-router'
+import { useAuth } from '../auth'
 
 export default function Layout() {
+  const { user, logout } = useAuth()
+
   return (
     <>
       <header className="topbar">
@@ -9,7 +12,14 @@ export default function Layout() {
           <nav>
             <NavLink to="/clubs">Clubs</NavLink>
             <NavLink to="/events">Events</NavLink>
-            <NavLink to="/login">Log in</NavLink>
+            {user ? (
+              <>
+                <span className="muted">{user.name}</span>
+                <button className="link-btn" onClick={logout}>Log out</button>
+              </>
+            ) : (
+              <NavLink to="/login">Log in</NavLink>
+            )}
           </nav>
         </div>
       </header>

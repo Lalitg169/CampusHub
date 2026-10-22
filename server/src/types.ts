@@ -1,14 +1,17 @@
+export type Role = 'student' | 'club_admin' | 'college_admin';
+
 export interface AuthUser {
     id: number;
-    username: string;
+    name: string;
+    role: Role;
 }
 
 export interface UserRow {
     id: number;
-    username: string;
-    password: string;
-    bio: string;
-    avatar_url: string;
+    name: string;
+    email: string;
+    role: Role;
+    password_hash: string;
     created_at: Date;
 }
 
@@ -51,13 +54,6 @@ export interface CommentView {
 export interface CategoryRow {
     id: number;
     name: string;
-}
-
-export interface PasswordResetRow {
-    id: number;
-    user_id: number;
-    token: string;
-    expires_at: Date;
 }
 
 export interface CountRow {

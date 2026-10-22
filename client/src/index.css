@@ -114,3 +114,73 @@ main {
   background: transparent;
   color: var(--accent);
 }
+
+nav {
+  align-items: center;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 24px;
+}
+
+.form {
+  max-width: 380px;
+  margin: 32px auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.form h1 {
+  margin: 0 0 4px;
+  font-size: 1.5rem;
+}
+
+.form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.9rem;
+}
+
+input,
+textarea,
+select {
+  font: inherit;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+}
+
+button.btn {
+  font: inherit;
+  cursor: pointer;
+}
+
+button.btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.error {
+  color: #dc2626;
+  margin: 0;
+}
+
+.form p {
+  margin: 0;
+}

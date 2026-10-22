@@ -14,7 +14,7 @@ function verify(token: string): AuthUser {
 }
 
 export function signToken(user: AuthUser): string {
-    return jwt.sign({ id: user.id, username: user.username }, config.jwtSecret, { expiresIn: '7d' });
+    return jwt.sign({ id: user.id, name: user.name, role: user.role }, config.jwtSecret, { expiresIn: '7d' });
 }
 
 /** Rejects the request unless a valid bearer token is present. */

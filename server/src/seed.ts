@@ -77,7 +77,7 @@ async function main(): Promise<void> {
         console.log('Truncating existing data…');
         await run(
             `TRUNCATE certificates, tickets, registrations, events, club_members, clubs,
-                      likes, comments, password_resets, posts, categories, users RESTART IDENTITY CASCADE`
+                      likes, comments, posts, categories, users RESTART IDENTITY CASCADE`
         );
     }
 
@@ -94,7 +94,7 @@ async function main(): Promise<void> {
     ];
 
     await run(
-        `INSERT INTO users (username, name, email, role, password)
+        `INSERT INTO users (username, name, email, role, password_hash)
          SELECT u, n, u || '@campushub.local', r, $1
            FROM unnest($2::text[], $3::text[], $4::text[]) AS x(u, n, r)
          ON CONFLICT (username) DO NOTHING`,
@@ -200,7 +200,7 @@ async function main(): Promise<void> {
 
     const seconds = ((Date.now() - started) / 1000).toFixed(1);
     console.log(`\nSeeded ${POSTS.toLocaleString()} posts in ${seconds}s.`);
-    console.log('Log in as admin, aarav (club admin) or meera (student), password password123');
+    console.log('Log in as admin@, aarav@ (club admin) or meera@ (student) campushub.local, password password123');
 }
 
 main()
