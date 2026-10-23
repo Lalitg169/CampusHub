@@ -12,6 +12,7 @@
     "db:down": "docker compose -f ../docker-compose.yml down",
     "db:reset": "docker compose -f ../docker-compose.yml down -v && docker compose -f ../docker-compose.yml up -d",
     "db:migrate": "tsx scripts/migrate.ts",
+    "race": "tsx scripts/race.ts",
     "seed": "tsx src/seed.ts"
   },
   "keywords": [],
