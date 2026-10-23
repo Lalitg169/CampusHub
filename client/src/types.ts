@@ -33,6 +33,7 @@ export interface CampusEvent {
   ends_at: string | null
   capacity: number
   confirmed: number
+  waitlisted: number
   canManage?: boolean
 }
 
@@ -44,4 +45,5 @@ export interface Registration {
   status: RegistrationStatus
   checked_in_at: string | null
   created_at: string
+  position: number | null
 }

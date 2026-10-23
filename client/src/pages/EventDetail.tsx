@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { api } from '../api'
 import { useAuth } from '../auth'
@@ -15,23 +15,29 @@ export default function EventDetail() {
   const [message, setMessage] = useState('')
   const [now] = useState(() => Date.now())
 
+  const load = useCallback(async () => {
+    if (!id) return
+    const [ev, reg] = await Promise.all([
+      api.get<{ event: CampusEvent }>(`/events/${id}`),
+      user ? api.get<{ registration: Registration | null }>(`/events/${id}/registration`) : null,
+    ])
+    return { event: ev.event, registration: reg?.registration ?? null }
+  }, [id, user])
+
   useEffect(() => {
     if (!id) return
     let active = true
-    api
-      .get<{ event: CampusEvent }>(`/events/${id}`)
-      .then((d) => active && setLoaded({ id, event: d.event }))
+    load()
+      .then((d) => {
+        if (!active || !d) return
+        setLoaded({ id, event: d.event })
+        setRegistration(d.registration)
+      })
       .catch((e) => active && setLoaded({ id, error: e.message }))
-    if (user) {
-      api
-        .get<{ registration: Registration | null }>(`/events/${id}/registration`)
-        .then((d) => active && setRegistration(d.registration))
-        .catch(() => {})
-    }
     return () => {
       active = false
     }
-  }, [id, user])
+  }, [id, load])
 
   const current = loaded?.id === id ? loaded : null
   if (current?.error) return <p className="error">{current.error}</p>
@@ -48,19 +54,27 @@ export default function EventDetail() {
     }
   }
 
-  async function register() {
-    if (!event) return
+  async function act(request: () => Promise<unknown>) {
     setBusy(true)
     setMessage('')
     try {
-      const d = await api.post<{ registration: Registration }>(`/events/${event.id}/registration`)
-      setRegistration(d.registration)
-      setLoaded({ id: String(event.id), event: { ...event, confirmed: event.confirmed + 1 } })
+      await request()
+      const d = await load()
+      if (d) {
+        setLoaded({ id: String(d.event.id), event: d.event })
+        setRegistration(d.registration)
+      }
     } catch (e) {
-      setMessage(e instanceof Error ? e.message : 'Could not register')
+      setMessage(e instanceof Error ? e.message : 'Something went wrong')
     } finally {
       setBusy(false)
     }
+  }
+
+  const register = () => act(() => api.post(`/events/${event.id}/registration`))
+  const cancel = () => {
+    const what = registration?.status === 'waitlisted' ? 'Leave the waitlist?' : 'Give up your seat?'
+    if (confirm(what)) act(() => api.del(`/events/${event.id}/registration`))
   }
 
   const left = event.capacity - event.confirmed
@@ -80,6 +94,7 @@ export default function EventDetail() {
         <span>{event.venue || 'Venue TBA'}</span>
         <span>
           {event.confirmed} / {event.capacity} registered{left <= 0 && ' · full'}
+          {event.waitlisted > 0 && ` · ${event.waitlisted} on waitlist`}
         </span>
       </div>
       {event.description && <p className="post-body">{event.description}</p>}
@@ -89,12 +104,29 @@ export default function EventDetail() {
           <p>
             <Link to="/login">Log in</Link> to register.
           </p>
-        ) : registration?.status === 'confirmed' ? (
-          <p className="ok">You're registered. See you there!</p>
         ) : started ? (
-          <p className="muted">Registration is closed.</p>
+          <p className="muted">
+            {registration?.status === 'confirmed' ? "You're registered." : 'Registration is closed.'}
+          </p>
+        ) : registration?.status === 'confirmed' ? (
+          <>
+            <p className="ok">You're registered. See you there!</p>
+            <button className="link-btn" onClick={cancel} disabled={busy}>Cancel my registration</button>
+          </>
+        ) : registration?.status === 'waitlisted' ? (
+          <>
+            <p>
+              You're <strong>#{registration.position}</strong> on the waitlist. If a seat opens up, it's yours automatically.
+            </p>
+            <button className="link-btn" onClick={cancel} disabled={busy}>Leave waitlist</button>
+          </>
         ) : left <= 0 ? (
-          <button className="btn" disabled>Full</button>
+          <>
+            <p className="muted">All seats are taken{event.waitlisted > 0 && `, ${event.waitlisted} waiting`}.</p>
+            <button className="btn" onClick={register} disabled={busy}>
+              {busy ? 'Joining…' : 'Join waitlist'}
+            </button>
+          </>
         ) : (
           <button className="btn" onClick={register} disabled={busy}>
             {busy ? 'Registering…' : 'Register'}

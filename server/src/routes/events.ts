@@ -41,7 +41,9 @@ const EVENT_SELECT = `
     SELECT e.id, e.club_id, e.title, e.description, e.venue, e.starts_at, e.ends_at, e.capacity,
            c.name AS club_name, c.slug AS club_slug,
            (SELECT count(*)::int FROM registrations r
-             WHERE r.event_id = e.id AND r.status = 'confirmed') AS confirmed
+             WHERE r.event_id = e.id AND r.status = 'confirmed') AS confirmed,
+           (SELECT count(*)::int FROM registrations r
+             WHERE r.event_id = e.id AND r.status = 'waitlisted') AS waitlisted
       FROM events e
       JOIN clubs c ON c.id = e.club_id
 `;

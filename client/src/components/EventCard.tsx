@@ -13,7 +13,7 @@ export default function EventCard({ event, showClub = true }: { event: CampusEve
         {showClub && `${event.club_name} · `}
         {event.venue || 'Venue TBA'}
       </span>
-      <span className={left > 0 ? 'seats' : 'seats full'}>{left > 0 ? `${left} seats left` : 'Full'}</span>
+      <span className={left > 0 ? 'seats' : 'seats full'}>{left > 0 ? `${left} seats left` : 'Full · waitlist open'}</span>
     </Link>
   )
 }
