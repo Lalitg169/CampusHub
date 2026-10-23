@@ -3,6 +3,7 @@ import Layout from './components/Layout'
 import RequireRole from './components/RequireRole'
 import Home from './pages/Home'
 import Clubs from './pages/Clubs'
+import ClubDetail from './pages/ClubDetail'
 import Events from './pages/Events'
 import Login from './pages/Login'
 import Register from './pages/Register'
@@ -15,6 +16,7 @@ export default function App() {
       <Route element={<Layout />}>
         <Route index element={<Home />} />
         <Route path="clubs" element={<Clubs />} />
+        <Route path="clubs/:slug" element={<ClubDetail />} />
         <Route path="events" element={<Events />} />
         <Route path="login" element={<Login />} />
         <Route path="register" element={<Register />} />

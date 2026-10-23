@@ -1,8 +1,8 @@
 import express, { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { all, get, withTransaction, isUniqueViolation } from '../db';
-import { requireAuth } from '../middleware/auth';
-import { requireRole, requireClubAdmin } from '../middleware/roles';
+import { requireAuth, optionalAuth } from '../middleware/auth';
+import { requireRole, requireClubAdmin, isClubAdmin } from '../middleware/roles';
 import { parseBody } from '../middleware/validate';
 
 const router = express.Router();
@@ -59,6 +59,21 @@ router.get('/', async (_req: Request, res: Response, next: NextFunction) => {
     try {
         const clubs = await all(`${CLUB_SELECT} GROUP BY c.id ORDER BY c.name`);
         res.json({ success: true, clubs });
+    } catch (err) {
+        next(err);
+    }
+});
+
+// GET /api/clubs/:slug
+router.get('/:slug', optionalAuth, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const club = await get<{ id: number }>(`${CLUB_SELECT} WHERE c.slug = $1 GROUP BY c.id`, [req.params.slug]);
+        if (!club) {
+            return res.status(404).json({ success: false, error: 'Club not found.' });
+        }
+        const canManage =
+            req.user?.role === 'college_admin' || (req.user !== undefined && (await isClubAdmin(req.user.id, club.id)));
+        res.json({ success: true, club: { ...club, canManage } });
     } catch (err) {
         next(err);
     }

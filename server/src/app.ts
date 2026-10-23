@@ -1,4 +1,3 @@
-import path from 'path';
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 
@@ -6,9 +5,7 @@ import { config } from './config';
 import { pool } from './db';
 import postRoutes from './routes/posts';
 import authRoutes from './routes/auth';
-import categoryRoutes from './routes/categories';
 import clubRoutes from './routes/clubs';
-import uploadRoutes from './routes/upload';
 import { apiLimiter } from './middleware/rateLimit';
 import './types';
 
@@ -22,7 +19,6 @@ if (config.trustProxy > 0) {
 
 app.use(cors({ origin: 'http://localhost:3000' }));
 app.use(express.json());
-app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 app.use((req: Request, _res: Response, next: NextFunction) => {
     console.log(`${req.method} ${req.url}`);
@@ -43,11 +39,9 @@ app.get('/api/health', async (_req: Request, res: Response) => {
 });
 
 app.use('/api', apiLimiter);
-app.use('/api/posts', postRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/clubs/:id/posts', postRoutes);
 app.use('/api/clubs', clubRoutes);
-app.use('/api/categories', categoryRoutes);
-app.use('/api/upload', uploadRoutes);
 
 app.use((req: Request, res: Response) => {
     res.status(404).json({ success: false, error: `${req.method} ${req.url} not found` });

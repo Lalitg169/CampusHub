@@ -1,13 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { api } from '../api'
-
-interface Club {
-  id: number
-  name: string
-  slug: string
-  description: string
-  admins: { id: number; name: string }[]
-}
+import type { Club } from '../types'
 
 export default function Admin() {
   const [clubs, setClubs] = useState<Club[]>([])

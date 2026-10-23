@@ -1,144 +1,40 @@
-# DevBlog
+# CampusHub
 
-A full stack blogging app — write, browse and discuss posts.
+College clubs post updates and run events; students follow along and sign up.
 
-The backend is an Express API written in TypeScript, backed by PostgreSQL. The
-frontend is plain HTML, CSS and JavaScript with no build step and no framework.
+Work in progress. `server/` is an Express + TypeScript API on PostgreSQL, `client/` is a React + TypeScript app built with Vite.
 
-## Stack
+## Running locally
 
-- **Backend:** Node.js, Express 5, TypeScript, PostgreSQL (`pg`)
-- **Auth:** JWT bearer tokens, bcrypt password hashing
-- **Frontend:** static HTML/CSS/JS (`index.html`, `post.html`, `login.html`, `write.html`)
-
-## Getting started
-
-Needs Node 20+ and Docker. The database runs in a container on host port
-**5433**, so it will not collide with a Postgres already listening on 5432.
+Needs Node 20+ and either Docker or a local Postgres. The database listens on host port **5433** so it doesn't clash with a Postgres already on 5432.
 
 ```bash
+# database
+npm --prefix server run db:up          # docker, or: ./scripts/dev-db.sh start
+
+# api on :5000
 cd server
 npm install
-cp .env.example .env       # then set JWT_SECRET
-npm run db:up              # starts Postgres
-npm run db:migrate         # applies migrations/*.sql
-npm run seed               # 50 sample posts, users author1..author8 / password123
+cp .env.example .env                   # set JWT_SECRET (openssl rand -hex 32)
+npm run db:migrate
+npm run seed
+npm run dev
+
+# client on :5173 (another terminal)
+cd client
+npm install
 npm run dev
 ```
 
-No Docker? A helper script runs Postgres in userspace instead — no container,
-no root, its own cluster on the same port 5433:
+Seed accounts all use the password `password123`: `admin@campushub.local` (college admin), `aarav@campushub.local` (Coding Club admin), `meera@campushub.local` (student).
 
-```bash
-./scripts/dev-db.sh start     # initialises and starts it, then run db:migrate
-./scripts/dev-db.sh psql      # open a shell against it
-./scripts/dev-db.sh destroy   # remove it entirely
-```
-
-The API is then on `http://localhost:5000`. Serve the project root with any
-static server for the frontend:
-
-```bash
-python3 -m http.server 8000
-```
+## Server scripts
 
 | Script | What it does |
 | --- | --- |
-| `npm run dev` | Run the API in watch mode via `tsx` |
-| `npm run build` | Compile TypeScript to `dist/` |
-| `npm start` | Run the compiled server |
-| `npm run typecheck` | Type check without emitting |
-| `npm run db:up` | Start the Postgres container |
-| `npm run db:down` | Stop it, keeping the data volume |
-| `npm run db:reset` | Destroy the volume and start clean |
-| `npm run db:migrate` | Apply pending `migrations/*.sql` to `$DATABASE_URL` |
-| `npm run seed` | Populate sample data (`-- --posts=100000 --fresh`) |
-
-### Configuration
-
-| Variable | Purpose |
-| --- | --- |
-| `DATABASE_URL` | Postgres connection string |
-| `DATABASE_SSL` | `true` for hosted Postgres (Neon, Supabase, Render) |
-| `JWT_SECRET` | Token signing key — `openssl rand -hex 32` |
-| `PORT` | API port, defaults to 5000 |
-| `TRUST_PROXY` | Reverse-proxy hop count so rate limiting sees the real client IP |
-| `NODE_ENV` | Set to `production` when deployed — withholds the password-reset token |
-
-## API
-
-All responses are JSON and carry a `success` flag. Protected routes expect an
-`Authorization: Bearer <token>` header.
-
-### Auth
-
-| Method | Route | Auth | Description |
-| --- | --- | --- | --- |
-| POST | `/api/auth/register` | — | Create an account, returns a token |
-| POST | `/api/auth/login` | — | Sign in, returns a token |
-| GET | `/api/auth/me` | ✔ | Current user's profile |
-| PUT | `/api/auth/me` | ✔ | Update bio / avatar |
-| POST | `/api/auth/forgot-password` | — | Issue a reset token |
-| POST | `/api/auth/reset-password` | — | Redeem a reset token |
-| GET | `/api/auth/users/:username` | — | Public profile and that user's posts |
-
-### Posts
-
-| Method | Route | Auth | Description |
-| --- | --- | --- | --- |
-| GET | `/api/posts` | optional | List posts — `?page`, `?limit`, `?q`, `?category`, `?sort=latest\|popular` |
-| GET | `/api/posts/:id` | optional | A single post |
-| POST | `/api/posts` | ✔ | Create a post |
-| PUT | `/api/posts/:id` | ✔ (author) | Update a post |
-| DELETE | `/api/posts/:id` | ✔ (author) | Delete a post |
-| GET | `/api/posts/:id/comments` | — | Comments on a post |
-| POST | `/api/posts/:id/comments` | ✔ | Add a comment |
-| DELETE | `/api/posts/:id/comments/:commentId` | ✔ (author) | Delete a comment |
-| POST | `/api/posts/:id/like` | ✔ | Toggle a like |
-
-### Categories and uploads
-
-| Method | Route | Auth | Description |
-| --- | --- | --- | --- |
-| GET | `/api/categories` | — | Categories with post counts |
-| POST | `/api/categories` | ✔ | Create a category |
-| DELETE | `/api/categories/:id` | ✔ | Delete a category |
-| POST | `/api/upload` | ✔ | Upload an image (field `image`, max 5 MB) |
-| GET | `/api/health` | — | Liveness and database connectivity |
-
-Posts accept either `category_id` or a `category` name, which is created on
-demand if it does not exist yet.
-
-`?q` matches title and content, case-insensitive. `%`, `_` and `\` are matched
-literally.
-
-## Frontend
-
-Serve the HTML files with any static server. `script.js` works out where the
-API lives at load time, so the same files run locally and deployed:
-
-1. `window.DEVBLOG_API_BASE`, if a page sets it before `script.js` loads
-2. `<meta name="devblog-api-base" content="https://api.example.com/api">`
-3. Otherwise `http://localhost:5000/api` on localhost, and same-origin `/api`
-   anywhere else
-
-Only a frontend hosted on a *different* domain than the API needs the meta tag.
-
-| Page | What it does |
-| --- | --- |
-| `index.html` | Post feed from `GET /api/posts` — search, category filter, sort, pagination |
-| `post.html?id=<id>` | A single post |
-| `login.html` | Login and registration, in one form |
-| `write.html` | Publish a post, then redirect to it |
-
-`script.js` is shared by every page: it holds `API_BASE`, the `api()` fetch
-wrapper, token storage, and the nav's logged-in state.
-
-## Notes
-
-- Rate limiting: 300 requests / 15 min across `/api`, 20 / 15 min on auth routes.
-- Password reset has no mail transport configured, so in development the token
-  is returned in the response and logged to the console. With
-  `NODE_ENV=production` it is withheld from both, and the flow needs a mailer
-  before it is usable in a deployment.
-- Uploaded images are written to `server/uploads/` and served from `/uploads`.
+| `npm run dev` | API in watch mode |
+| `npm run build` / `npm start` | Compile to `dist/` and run it |
+| `npm run typecheck` | Type check only |
+| `npm run db:up` / `db:down` / `db:reset` | Postgres container |
+| `npm run db:migrate` | Apply pending `migrations/*.sql` |
+| `npm run seed` | Sample users, clubs, events and posts (`-- --fresh` to truncate first) |

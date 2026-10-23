@@ -5,19 +5,11 @@ import { pool, all, get, run } from './db';
 /**
  * Sample data for local development.
  *
- *   npm run seed                  # clubs, events, users and 50 posts
- *   npm run seed -- --posts=100000  # bigger post table
- *   npm run seed -- --fresh       # truncate first
+ *   npm run seed            # users, clubs, events and a few posts
+ *   npm run seed -- --fresh # truncate first
  */
 
-const arg = (name: string, fallback: number): number => {
-    const match = process.argv.find((a) => a.startsWith(`--${name}=`));
-    return match ? Number(match.split('=')[1]) : fallback;
-};
-
-const POSTS = arg('posts', 50);
 const FRESH = process.argv.includes('--fresh');
-const BATCH = 1000;
 
 const PEOPLE = [
     'Aarav Sharma', 'Diya Patel', 'Vihaan Gupta', 'Ananya Iyer', 'Arjun Reddy', 'Ishita Verma',
@@ -39,45 +31,19 @@ const EVENTS = [
     { club: 'drama', title: 'Improv evening', venue: 'Auditorium', inDays: 12, hour: 18, capacity: 3 },
 ];
 
-const CATEGORIES = ['Technology', 'Databases', 'Frontend', 'DevOps', 'Career', 'Security', 'Finance', 'Language'];
-
-const NOUNS = ['index', 'query', 'cache', 'schema', 'migration', 'pipeline', 'container', 'cluster', 'token', 'session', 'pointer', 'buffer', 'thread', 'socket', 'compiler', 'runtime', 'daemon', 'replica', 'shard', 'transaction', 'deadlock', 'checksum', 'gateway', 'payload', 'latency', 'throughput', 'namespace', 'closure', 'promise', 'stream'];
-const VERBS = ['scaling', 'debugging', 'profiling', 'refactoring', 'benchmarking', 'migrating', 'caching', 'testing', 'deploying', 'monitoring', 'optimising', 'securing'];
-const ADJS = ['distributed', 'immutable', 'concurrent', 'idempotent', 'atomic', 'lazy', 'eventual', 'strict', 'nested', 'ephemeral', 'durable', 'partial'];
-const FILLER = ['the', 'a', 'when', 'because', 'after', 'before', 'while', 'through', 'without', 'against', 'across', 'between', 'during', 'under', 'within'];
-
-let seed = 42;
-const rand = (): number => {
-    // Deterministic LCG so a given --posts value always produces the same corpus.
-    seed = (seed * 1664525 + 1013904223) % 4294967296;
-    return seed / 4294967296;
-};
-const pick = <T>(xs: T[]): T => xs[Math.floor(rand() * xs.length)];
-
-const title = (): string => {
-    const shape = Math.floor(rand() * 3);
-    if (shape === 0) return `${pick(VERBS)} ${pick(ADJS)} ${pick(NOUNS)}s in production`;
-    if (shape === 1) return `Why your ${pick(NOUNS)} is ${pick(ADJS)}`;
-    return `A practical guide to ${pick(ADJS)} ${pick(NOUNS)}s`;
-};
-
-const sentence = (): string => {
-    const len = 8 + Math.floor(rand() * 12);
-    const words = Array.from({ length: len }, () => pick([...NOUNS, ...VERBS, ...ADJS, ...FILLER]));
-    return `${words.join(' ').replace(/^./, (c) => c.toUpperCase())}.`;
-};
-
-const body = (): string => {
-    const paras = 2 + Math.floor(rand() * 4);
-    return Array.from({ length: paras }, () => Array.from({ length: 3 + Math.floor(rand() * 4) }, sentence).join(' ')).join('\n\n');
-};
+const POSTS = [
+    { club: 'coding', title: 'Welcome back!', content: 'First meetup of the semester is this Friday. Bring a laptop, we will set up Git and pick projects for the term.', daysAgo: 9 },
+    { club: 'coding', title: 'Contest results', content: 'Congrats to everyone who took part in the weekend contest. Solutions are up on the club drive.', daysAgo: 2 },
+    { club: 'robotics', title: 'Workshop kits are in', content: 'The new motor driver kits arrived. First come, first served at the build session.', daysAgo: 4 },
+    { club: 'music', title: 'Open mic sign-ups', content: 'Want to perform at the open mic? Register for the event and tell us what you will play.', daysAgo: 3 },
+    { club: 'drama', title: 'Auditions next week', content: 'We are casting for the winter production. Improv evening is a good warm-up, seats are limited.', daysAgo: 1 },
+];
 
 async function main(): Promise<void> {
     if (FRESH) {
         console.log('Truncating existing data…');
         await run(
-            `TRUNCATE certificates, tickets, registrations, events, club_members, clubs,
-                      likes, comments, posts, categories, users RESTART IDENTITY CASCADE`
+            'TRUNCATE certificates, tickets, registrations, events, posts, club_members, clubs, users RESTART IDENTITY CASCADE'
         );
     }
 
@@ -99,10 +65,6 @@ async function main(): Promise<void> {
            FROM unnest($2::text[], $3::text[], $4::text[]) AS x(u, n, r)
          ON CONFLICT (username) DO NOTHING`,
         [password, accounts.map((a) => a.username), accounts.map((a) => a.name), accounts.map((a) => a.role)]
-    );
-    await run(
-        `INSERT INTO categories (name) SELECT c FROM unnest($1::text[]) AS c ON CONFLICT (name) DO NOTHING`,
-        [CATEGORIES]
     );
     await run(
         `INSERT INTO clubs (name, slug, description)
@@ -140,66 +102,20 @@ async function main(): Promise<void> {
         );
     }
 
-    const userIds = (await all<{ id: number }>('SELECT id FROM users ORDER BY id')).map((r) => r.id);
-    const categoryIds = (await all<{ id: number }>('SELECT id FROM categories ORDER BY id')).map((r) => r.id);
-    const clubIds = clubs.map((c) => c.id);
-    console.log(`${userIds.length} users, ${clubIds.length} clubs, ${EVENTS.length} events ready.`);
-
-    const started = Date.now();
-    let written = 0;
-
-    while (written < POSTS) {
-        const size = Math.min(BATCH, POSTS - written);
-        const titles: string[] = [];
-        const bodies: string[] = [];
-        const cats: number[] = [];
-        const owners: number[] = [];
-        const postClubs: number[] = [];
-        const ages: number[] = [];
-
-        for (let i = 0; i < size; i++) {
-            titles.push(title());
-            bodies.push(body());
-            cats.push(pick(categoryIds));
-            owners.push(pick(userIds));
-            postClubs.push(pick(clubIds));
-            ages.push(Math.floor(rand() * 720));
-        }
-
+    for (const p of POSTS) {
+        const exists = await get('SELECT 1 FROM posts WHERE club_id = $1 AND title = $2', [clubId.get(p.club), p.title]);
+        if (exists) continue;
         await run(
-            `INSERT INTO posts (title, content, category_id, user_id, club_id, created_at, updated_at)
-             SELECT t, b, c, u, cl, NOW() - (age || ' days')::interval, NOW()
-               FROM unnest($1::text[], $2::text[], $3::int[], $4::int[], $5::int[], $6::int[]) AS x(t, b, c, u, cl, age)`,
-            [titles, bodies, cats, owners, postClubs, ages]
+            `INSERT INTO posts (club_id, author_id, title, content, created_at)
+             SELECT m.club_id, m.user_id, $2, $3, NOW() - make_interval(days => $4)
+               FROM club_members m
+              WHERE m.club_id = $1 AND m.role = 'admin'
+              LIMIT 1`,
+            [clubId.get(p.club), p.title, p.content, p.daysAgo]
         );
-
-        written += size;
-        if (written % 10000 === 0 || written === POSTS) {
-            console.log(`  ${written.toLocaleString()} / ${POSTS.toLocaleString()} posts`);
-        }
     }
 
-    // Engagement only on the newest slice, so small seeds still look alive.
-    const recent = (await all<{ id: number }>('SELECT id FROM posts ORDER BY created_at DESC LIMIT 200')).map((r) => r.id);
-
-    for (const postId of recent) {
-        const commentCount = Math.floor(rand() * 4);
-        for (let i = 0; i < commentCount; i++) {
-            await run('INSERT INTO comments (post_id, user_id, content) VALUES ($1, $2, $3)', [
-                postId,
-                pick(userIds),
-                sentence(),
-            ]);
-        }
-        for (const userId of userIds) {
-            if (rand() < 0.3) {
-                await run('INSERT INTO likes (post_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [postId, userId]);
-            }
-        }
-    }
-
-    const seconds = ((Date.now() - started) / 1000).toFixed(1);
-    console.log(`\nSeeded ${POSTS.toLocaleString()} posts in ${seconds}s.`);
+    console.log(`${accounts.length} users, ${CLUBS.length} clubs, ${EVENTS.length} events, ${POSTS.length} posts.`);
     console.log('Log in as admin@, aarav@ (club admin) or meera@ (student) campushub.local, password password123');
 }
 
