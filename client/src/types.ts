@@ -35,3 +35,13 @@ export interface CampusEvent {
   confirmed: number
   canManage?: boolean
 }
+
+export type RegistrationStatus = 'confirmed' | 'waitlisted' | 'cancelled'
+
+export interface Registration {
+  id: number
+  event_id: number
+  status: RegistrationStatus
+  checked_in_at: string | null
+  created_at: string
+}

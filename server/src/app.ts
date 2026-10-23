@@ -7,6 +7,7 @@ import postRoutes from './routes/posts';
 import authRoutes from './routes/auth';
 import clubRoutes from './routes/clubs';
 import eventRoutes from './routes/events';
+import registrationRoutes from './routes/registrations';
 import { apiLimiter } from './middleware/rateLimit';
 import './types';
 
@@ -43,6 +44,7 @@ app.use('/api', apiLimiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/clubs/:id/posts', postRoutes);
 app.use('/api/clubs', clubRoutes);
+app.use('/api/events/:id/registration', registrationRoutes);
 app.use('/api/events', eventRoutes);
 
 app.use((req: Request, res: Response) => {

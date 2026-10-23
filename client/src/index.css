@@ -326,3 +326,20 @@ h2 {
   color: #dc2626;
   border-color: #dc2626;
 }
+
+.register-box {
+  margin: 16px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.register-box p {
+  margin: 0;
+}
+
+.ok {
+  color: #16a34a;
+  font-weight: 600;
+}
