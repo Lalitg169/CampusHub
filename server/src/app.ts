@@ -17,7 +17,7 @@ if (config.trustProxy > 0) {
     app.set('trust proxy', config.trustProxy);
 }
 
-app.use(cors({ origin: 'http://localhost:3000' }));
+app.use(cors({ origin: config.clientOrigins }));
 app.use(express.json());
 
 app.use((req: Request, _res: Response, next: NextFunction) => {

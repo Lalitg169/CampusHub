@@ -9,6 +9,7 @@ const schema = z.object({
     PGPOOL_MAX: z.coerce.number().int().positive().default(10),
     JWT_SECRET: z.string().min(16, 'JWT_SECRET should be at least 16 characters'),
     TRUST_PROXY: z.coerce.number().int().min(0).default(0),
+    CLIENT_ORIGIN: z.string().default('http://localhost:5173'),
 });
 
 const parsed = schema.safeParse(process.env);
@@ -32,4 +33,6 @@ export const config = {
     poolMax: env.PGPOOL_MAX,
     jwtSecret: env.JWT_SECRET,
     trustProxy: env.TRUST_PROXY,
+    // comma separated, e.g. "http://localhost:5173,http://localhost:8080"
+    clientOrigins: env.CLIENT_ORIGIN.split(',').map((o) => o.trim()).filter(Boolean),
 };
