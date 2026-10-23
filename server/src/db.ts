@@ -1,4 +1,4 @@
-import { Pool, QueryResultRow } from 'pg';
+import { Pool, PoolClient, QueryResultRow } from 'pg';
 import { config } from './config';
 
 // Hosted Postgres (Neon, Supabase, Render) serves a certificate that is not in
@@ -40,6 +40,21 @@ export async function get<T extends QueryResultRow>(sql: string, params: unknown
 export async function run(sql: string, params: unknown[] = []): Promise<number> {
     const result = await pool.query(sql, params);
     return result.rowCount ?? 0;
+}
+
+export async function withTransaction<T>(fn: (client: PoolClient) => Promise<T>): Promise<T> {
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        const result = await fn(client);
+        await client.query('COMMIT');
+        return result;
+    } catch (err) {
+        await client.query('ROLLBACK');
+        throw err;
+    } finally {
+        client.release();
+    }
 }
 
 /** Postgres unique-violation error code. */

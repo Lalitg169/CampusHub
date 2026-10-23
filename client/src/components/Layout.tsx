@@ -12,6 +12,7 @@ export default function Layout() {
           <nav>
             <NavLink to="/clubs">Clubs</NavLink>
             <NavLink to="/events">Events</NavLink>
+            {user?.role === 'college_admin' && <NavLink to="/admin">Admin</NavLink>}
             {user ? (
               <>
                 <span className="muted">{user.name}</span>

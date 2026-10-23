@@ -7,6 +7,7 @@ import { pool } from './db';
 import postRoutes from './routes/posts';
 import authRoutes from './routes/auth';
 import categoryRoutes from './routes/categories';
+import clubRoutes from './routes/clubs';
 import uploadRoutes from './routes/upload';
 import { apiLimiter } from './middleware/rateLimit';
 import './types';
@@ -44,6 +45,7 @@ app.get('/api/health', async (_req: Request, res: Response) => {
 app.use('/api', apiLimiter);
 app.use('/api/posts', postRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/clubs', clubRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/upload', uploadRoutes);
 
