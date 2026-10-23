@@ -1,15 +1,16 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { useParams } from 'react-router'
+import { Link, useParams } from 'react-router'
 import { api } from '../api'
-import type { Club, Post } from '../types'
-
-const dateFmt = new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeZone: 'Asia/Kolkata' })
+import EventCard from '../components/EventCard'
+import { formatDate } from '../lib/format'
+import type { CampusEvent, Club, Post } from '../types'
 
 export default function ClubDetail() {
   const { slug } = useParams()
   // keyed by slug so moving between clubs never shows the previous one
   const [loaded, setLoaded] = useState<{ slug: string; club?: Club; error?: string } | null>(null)
   const [posts, setPosts] = useState<Post[]>([])
+  const [events, setEvents] = useState<CampusEvent[]>([])
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -18,9 +19,13 @@ export default function ClubDetail() {
     api
       .get<{ club: Club }>(`/clubs/${slug}`)
       .then(async ({ club }) => {
-        const data = await api.get<{ posts: Post[] }>(`/clubs/${club.id}/posts`)
+        const [data, upcoming] = await Promise.all([
+          api.get<{ posts: Post[] }>(`/clubs/${club.id}/posts`),
+          api.get<{ events: CampusEvent[] }>(`/events?club=${club.slug}`),
+        ])
         if (!active) return
         setPosts(data.posts)
+        setEvents(upcoming.events)
         setLoaded({ slug, club })
       })
       .catch((e) => active && setLoaded({ slug, error: e.message }))
@@ -54,6 +59,17 @@ export default function ClubDetail() {
         <p className="muted">Run by {club.admins.map((a) => a.name).join(', ')}</p>
       )}
 
+      <div className="section-head">
+        <h2>Upcoming events</h2>
+        {club.canManage && (
+          <Link to={`/events/new?club=${club.id}`} className="btn btn-ghost">New event</Link>
+        )}
+      </div>
+      {events.length === 0 && <p className="muted">No upcoming events.</p>}
+      <div className="grid">
+        {events.map((e) => <EventCard key={e.id} event={e} showClub={false} />)}
+      </div>
+
       {club.canManage && <NewPost clubId={club.id} onPosted={(p) => setPosts((ps) => [p, ...ps])} />}
 
       <h2>Updates</h2>
@@ -69,7 +85,7 @@ export default function ClubDetail() {
             </div>
             <p className="post-body">{post.content}</p>
             <p className="muted small">
-              {post.author ?? 'Club admin'} · {dateFmt.format(new Date(post.created_at))}
+              {post.author ?? 'Club admin'} · {formatDate(post.created_at)}
             </p>
           </article>
         ))}

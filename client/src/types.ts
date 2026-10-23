@@ -20,3 +20,18 @@ export interface Post {
   created_at: string
   author: string | null
 }
+
+export interface CampusEvent {
+  id: number
+  club_id: number
+  club_name: string
+  club_slug: string
+  title: string
+  description: string
+  venue: string
+  starts_at: string
+  ends_at: string | null
+  capacity: number
+  confirmed: number
+  canManage?: boolean
+}

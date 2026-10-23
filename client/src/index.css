@@ -261,3 +261,68 @@ h2 {
   font-size: 0.85rem;
   margin: 0;
 }
+
+.event-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--text);
+}
+
+.event-card:hover {
+  border-color: var(--accent);
+}
+
+.event-when {
+  color: var(--accent);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.seats {
+  font-size: 0.85rem;
+  color: #16a34a;
+}
+
+.seats.full {
+  color: #dc2626;
+}
+
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  color: var(--muted);
+  margin-bottom: 16px;
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.section-head h2 {
+  margin: 24px 0 12px;
+}
+
+.form.wide {
+  max-width: 560px;
+}
+
+.row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.row label {
+  flex: 1;
+  min-width: 200px;
+}
+
+.btn.danger {
+  color: #dc2626;
+  border-color: #dc2626;
+}

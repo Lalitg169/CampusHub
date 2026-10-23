@@ -5,6 +5,8 @@ import Home from './pages/Home'
 import Clubs from './pages/Clubs'
 import ClubDetail from './pages/ClubDetail'
 import Events from './pages/Events'
+import EventDetail from './pages/EventDetail'
+import EventForm from './pages/EventForm'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import NotFound from './pages/NotFound'
@@ -18,6 +20,23 @@ export default function App() {
         <Route path="clubs" element={<Clubs />} />
         <Route path="clubs/:slug" element={<ClubDetail />} />
         <Route path="events" element={<Events />} />
+        <Route path="events/:id" element={<EventDetail />} />
+        <Route
+          path="events/new"
+          element={
+            <RequireRole roles={['club_admin', 'college_admin']}>
+              <EventForm />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="events/:id/edit"
+          element={
+            <RequireRole roles={['club_admin', 'college_admin']}>
+              <EventForm />
+            </RequireRole>
+          }
+        />
         <Route path="login" element={<Login />} />
         <Route path="register" element={<Register />} />
         <Route
